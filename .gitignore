@@ -1,3 +1,6 @@
+# Machine Specific Files
+.DS_Store
+
 # Prerequisites
 *.d
 
