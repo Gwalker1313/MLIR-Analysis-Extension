@@ -8,7 +8,7 @@
 
 namespace signed {
 
-using SignLattice = mlir::dataflow::Lattice<SignedState>;
+using SignedLattice = mlir::dataflow::Lattice<SignedState>;
 
 class SignedAnalysis
     : public mlir::dataflow::SparseForwardDataFlowAnalysis<SignedLattice> {

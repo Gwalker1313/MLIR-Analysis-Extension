@@ -46,30 +46,8 @@ SignedAnalysis::visitOperation(Operation *op,
   // This is the only rule that does not consult its operands, and without some
   // rule of this kind the analysis would have no facts to propagate at all.
   IntegerAttr value;
-  if (matchPattern(op, m_Constant(&value))) {
-    SignedState state = value.getValue().isZero() ? Kind::Zero : Kind::NonZero;
-    propagateIfChanged(result, result->join(state));
-    return success();
-  }
 
-  // Rule 2: `x & y` is zero if either operand is zero, since a zero operand
-  // clears every bit.  Note what this rule does *not* say: two nonzero
-  // operands tell us nothing, because 1 & 2 is 0.
-  if (isa<LLVM::AndOp>(op)) {
-    SignedState lhs = operands[0]->getValue();
-    SignedState rhs = operands[1]->getValue();
-
-    // Bottom means the solver has not yet proved anything reaches this
-    // operand.  Leaving the result alone keeps the analysis optimistic; the
-    // solver will call back here once the operand moves up the lattice.
-    if (lhs.isBottom() || rhs.isBottom())
-      return success();
-
-    if (lhs.kind == Kind::Zero || rhs.kind == Kind::Zero) {
-      propagateIfChanged(result, result->join(SignedState(Kind::Zero)));
-      return success();
-    }
-  }
+  // WIP
 
   return unknown();
 }
