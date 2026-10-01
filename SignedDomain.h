@@ -27,25 +27,28 @@ namespace signed {
 
 enum class Kind { Bottom, Neg, Zero, Pos, ZeroNeg, ZeroPos, Top };
 
+
 inline const char *name(Kind kind) {
   switch (kind) {
-  case Kind::Bottom:
+    case Kind::Bottom:
     return "bottom";
-  case Kind::Neg:
+    case Kind::Neg:
     return "neg";
-  case Kind::Zero:
+    case Kind::Zero:
     return "zero";
-  case Kind::Pos:
+    case Kind::Pos:
     return "pos";
-  case Kind::ZeroNeg:
+    case Kind::ZeroNeg:
     return "zero neg";
-  case Kind::ZeroPos:
+    case Kind::ZeroPos:
     return "zero pos";
-  case Kind::Top:
+    case Kind::Top:
     return "top";
   }
   return "top";
 }
+
+inline constexpr unsigned KindCount = 7;
 
 struct SignedState {
   Kind kind = Kind::Bottom;
@@ -58,15 +61,26 @@ struct SignedState {
 
   bool isBottom() const { return kind == Kind::Bottom; }
 
-  /// Least upper bound.  Two disagreeing facts lose all information.
+  /// Least upper bound.
   static SignedState join(const SignedState &lhs, const SignedState &rhs) {
-    if (lhs.kind == Kind::Bottom)
-      return rhs;
-    if (rhs.kind == Kind::Bottom)
-      return lhs;
-    if (lhs.kind == rhs.kind)
-      return lhs;
-    return top();
+    constexpr Bot = Kind::Bottom;
+    constexpr Neg = Kind::Neg;
+    constexpr Zer = Kind::Zero;
+    constexpr Pos = Kind::Pos;
+    constexpr ZeN = Kind::ZeroNeg;
+    constexpr ZeP = Kind::ZeroPos;
+    constexpr Top = Kind::Top;
+
+    static constexpr Kind JoinLookupTable[KindCount][KindCount] = {
+      //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top      
+      /* Bot */     {Bot, Neg, Zer, Pos, ZeN, ZeP, Top},
+      /* Neg */     {Neg, Neg, ZeN, Top, ZeN, Top, Top},
+      /* Zer */     {Zer, ZeN, Zer, ZeP, ZeN, ZeP, Top},
+      /* Pos */     {Pos, Top, ZeP, Pos, Top, ZeP, Top},
+      /* ZeN */     {ZeN, ZeN, ZeN, Top, ZeN, Top, Top},
+      /* ZeP */     {ZeP, Top, Zep, Zep, Top, Zep, Top},
+      /* Top */     {Top, Top, Top, Top, Top, Top, Top},
+    }
   }
 
   bool operator==(const SignedState &other) const { return kind == other.kind; }
