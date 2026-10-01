@@ -32,15 +32,15 @@ inline const char* name(Kind kind) {
     case Kind::Bottom:
     return "bottom";
     case Kind::Neg:
-    return "neg";
+    return "negative";
     case Kind::Zero:
     return "zero";
     case Kind::Pos:
-    return "pos";
+    return "positive";
     case Kind::ZeroNeg:
-    return "zero neg";
+    return "zero or negative";
     case Kind::ZeroPos:
-    return "zero pos";
+    return "zero or positive";
     case Kind::Top:
     return "top";
   }
