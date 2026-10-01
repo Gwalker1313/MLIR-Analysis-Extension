@@ -82,13 +82,13 @@ struct SignedState {
 
   /// Least upper bound.
   static SignedState join(const SignedState &lhs, const SignedState &rhs) {
-    constexpr Bot = Kind::Bottom;
-    constexpr Neg = Kind::Neg;
-    constexpr Zer = Kind::Zero;
-    constexpr Pos = Kind::Pos;
-    constexpr ZeN = Kind::ZeroNeg;
-    constexpr ZeP = Kind::ZeroPos;
-    constexpr Top = Kind::Top;
+    constexpr Kind Bot = Kind::Bottom;
+    constexpr Kind Neg = Kind::Neg;
+    constexpr Kind Zer = Kind::Zero;
+    constexpr Kind Pos = Kind::Pos;
+    constexpr Kind ZeN = Kind::ZeroNeg;
+    constexpr Kind ZeP = Kind::ZeroPos;
+    constexpr Kind Top = Kind::Top;
 
     static constexpr Kind JoinLookupTable[KindCount][KindCount] = {
       //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top      
