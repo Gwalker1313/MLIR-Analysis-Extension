@@ -1,4 +1,4 @@
-//===- SignedDomain.h - The abstract domain --------------------------===//
+//===- SignDomain.h - The abstract domain --------------------------===//
 //
 // A seven-point lattice recording whether an integer value is known to be zero.
 //
@@ -18,12 +18,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SIGNED_DOMAIN_H
-#define SIGNED_DOMAIN_H
+#ifndef SIGN_DOMAIN_H
+#define SIGN_DOMAIN_H
 
 #include "llvm/Support/raw_ostream.h"
 
-namespace signed {
+namespace sign {
 
 enum class Kind { Bottom, Neg, Zero, Pos, ZeroNeg, ZeroPos, Top };
 
@@ -69,19 +69,19 @@ inline const unsigned index(Kind kind) {
 
 inline constexpr unsigned KindCount = 7;
 
-struct SignedState {
+struct SignState {
   Kind kind = Kind::Bottom;
 
-  SignedState() = default;
-  /* implicit */ SignedState(Kind kind) : kind(kind) {}
+  SignState() = default;
+  /* implicit */ SignState(Kind kind) : kind(kind) {}
 
-  static SignedState bottom() { return Kind::Bottom; }
-  static SignedState top() { return Kind::Top; }
+  static SignState bottom() { return Kind::Bottom; }
+  static SignState top() { return Kind::Top; }
 
   bool isBottom() const { return kind == Kind::Bottom; }
 
   /// Least upper bound.
-  static SignedState join(const SignedState &lhs, const SignedState &rhs) {
+  static SignState join(const SignState &lhs, const SignState &rhs) {
     constexpr Kind Bot = Kind::Bottom;
     constexpr Kind Neg = Kind::Neg;
     constexpr Kind Zer = Kind::Zero;
@@ -104,18 +104,18 @@ struct SignedState {
     return JoinLookupTable[index(lhs.kind)][index(rhs.kind)];
   }
 
-  bool operator==(const SignedState &other) const { return kind == other.kind; }
-  bool operator!=(const SignedState &other) const { return kind != other.kind; }
+  bool operator==(const SignState &other) const { return kind == other.kind; }
+  bool operator!=(const SignState &other) const { return kind != other.kind; }
 
   void print(llvm::raw_ostream &os) const { os << name(kind); }
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const SignedState &state) {
+                                     const SignState &state) {
   state.print(os);
   return os;
 }
 
-} // namespace zero
+} // namespace sign
 
 #endif
