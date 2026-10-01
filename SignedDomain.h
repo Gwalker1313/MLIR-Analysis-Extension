@@ -1,6 +1,6 @@
 //===- SignDomain.h - The abstract domain --------------------------===//
 //
-// A seven-point lattice recording whether an integer value is known to be zero.
+// A seven-point lattice recording whether an integer value is known to be zero or signed.
 //
 //               Top             nothing is known
 //            /       \
@@ -47,7 +47,7 @@ inline const char* name(Kind kind) {
   return "top";
 }
 
-inline const unsigned index(Kind kind) {
+inline constexpr unsigned index(Kind kind) {
   switch (kind) {
     case Kind::Bottom:
     return 0;

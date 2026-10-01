@@ -3,7 +3,7 @@
 #ifndef SIGN_ANALYSIS_H
 #define SIGN_ANALYSIS_H
 
-#include "SignDomain.h"
+#include "SignedDomain.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 
 namespace sign {

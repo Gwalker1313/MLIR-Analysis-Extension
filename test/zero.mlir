@@ -4,7 +4,7 @@ module {
   llvm.func @transfers(%arg0: i32, %flag: i1) -> i32 {
     // Rule 1: constants.
     %zero = llvm.mlir.constant(0 : i32) : i32   // zero
-    %one = llvm.mlir.constant(1 : i32) : i32    // nonzero
+    %one = llvm.mlir.constant(1 : i32) : i32    // pos
 
     // Rule 2: `and` with a zero operand, either way round.
     %and_lhs = llvm.and %zero, %arg0 : i32      // zero
@@ -12,15 +12,15 @@ module {
     %and_chain = llvm.and %and_lhs, %arg0 : i32 // zero: facts chain
 
     // Rule 2 declines: 1 & 2 is 0, so two nonzero operands prove nothing.
-    %and_nn = llvm.and %one, %one : i32         // top
+    %and_nn = llvm.and %one, %one : i32         // zero pos: 1 & 2 is 0, so not pos
 
     // No rule covers these, so they are unknown even though a sharper
     // analysis could fold them. Adding `or` is the natural first exercise.
     %or_n = llvm.or %one, %arg0 : i32           // top, though it is nonzero
-    %add_zz = llvm.add %zero, %zero : i32       // top, though it is zero
+    %add_zz = llvm.add %zero, %zero : i32       // zero
 
     // Nothing is known about a function argument.
-    %and_unknown = llvm.and %arg0, %one : i32   // top
+    %and_unknown = llvm.and %arg0, %one : i32   // zero pos
 
     llvm.return %and_chain : i32
   }

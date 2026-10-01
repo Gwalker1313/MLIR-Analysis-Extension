@@ -1,18 +1,4 @@
-//===- ZeroAnalysis.cpp - Transfer functions ------------------------------===//
-//
-// The transfer function: given what is known about an operation's operands,
-// state what is known about its results.  This file and ZeroDomain.h are the
-// two to replace when building a different analysis; the rest of the project
-// is scaffolding.
-//
-// There are deliberately only two rules here, one of each kind an analysis
-// needs: one that introduces facts out of nothing (constants), and one that
-// propagates facts it was given (`and`).  Everything else is unknown.  Adding
-// a third rule should be a matter of adding a third `if`.
-//
-//===----------------------------------------------------------------------===//
-
-#include "SignAnalysis.h"
+#include "SignedAnalysis.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
@@ -31,8 +17,86 @@ constexpr Kind ZeN = Kind::ZeroNeg;
 constexpr Kind ZeP = Kind::ZeroPos;
 constexpr Kind Top = Kind::Top;
 
+static SignState evaluate(const TransferFunctions &table, SignState lhs, SignState rhs) {
+  return table[index(lhs.kind)][index(rhs.kind)];
+}
 
+constexpr TransferFunctions AddLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, Neg, Neg, Top, Neg, Top, Top},
+  /* Zer */     {Bot, Neg, Zer, Pos, ZeN, ZeP, Top},
+  /* Pos */     {Bot, Top, Pos, Pos, Top, Pos, Top},
+  /* ZeN */     {Bot, Neg, ZeN, Top, ZeN, Top, Top},
+  /* ZeP */     {Bot, Top, ZeP, Pos, Top, ZeP, Top},
+  /* Top */     {Bot, Top, Top, Top, Top, Top, Top},
+};
 
+constexpr TransferFunctions SubLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, Top, Neg, Neg, Top, Neg, Top},
+  /* Zer */     {Bot, Pos, Zer, Neg, ZeP, ZeN, Top},
+  /* Pos */     {Bot, Pos, Pos, Top, Pos, Top, Top},
+  /* ZeN */     {Bot, Top, ZeN, Neg, Top, ZeN, Top},
+  /* ZeP */     {Bot, Pos, ZeP, Top, ZeP, Top, Top},
+  /* Top */     {Bot, Top, Top, Top, Top, Top, Top},
+};
+
+constexpr TransferFunctions MultLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, Pos, Zer, Neg, ZeP, ZeN, Top},
+  /* Zer */     {Bot, Zer, Zer, Zer, Zer, Zer, Zer},
+  /* Pos */     {Bot, Neg, Zer, Pos, ZeN, ZeP, Top},
+  /* ZeN */     {Bot, ZeP, Zer, ZeN, ZeP, ZeN, Top},
+  /* ZeP */     {Bot, ZeN, Zer, ZeP, ZeN, ZeP, Top},
+  /* Top */     {Bot, Top, Zer, Top, Top, Top, Top},
+};
+
+constexpr TransferFunctions DivLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, ZeP, Bot, ZeN, ZeP, ZeN, Top},
+  /* Zer */     {Bot, Zer, Bot, Zer, Zer, Zer, Zer},
+  /* Pos */     {Bot, ZeN, Bot, ZeP, ZeN, ZeP, Top},
+  /* ZeN */     {Bot, ZeP, Bot, ZeN, ZeP, ZeN, Top},
+  /* ZeP */     {Bot, ZeN, Bot, ZeP, ZeN, ZeP, Top},
+  /* Top */     {Bot, Top, Bot, Top, Top, Top, Top},
+};
+
+constexpr TransferFunctions GreaterThanLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, ZeP, Zer, Zer, ZeP, Zer, ZeP},
+  /* Zer */     {Bot, Pos, Zer, Zer, ZeP, Zer, ZeP},
+  /* Pos */     {Bot, Pos, Pos, ZeP, Pos, ZeP, ZeP},
+  /* ZeN */     {Bot, ZeP, Zer, Zer, ZeP, Zer, ZeP},
+  /* ZeP */     {Bot, Pos, ZeP, ZeP, ZeP, ZeP, ZeP},
+  /* Top */     {Bot, ZeP, ZeP, ZeP, ZeP, ZeP, ZeP},
+};
+
+constexpr TransferFunctions EqualLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, ZeP, Zer, Zer, ZeP, Zer, ZeP},
+  /* Zer */     {Bot, Zer, Pos, Zer, ZeP, ZeP, ZeP},
+  /* Pos */     {Bot, Zer, Zer, ZeP, Zer, ZeP, ZeP},
+  /* ZeN */     {Bot, ZeP, ZeP, Zer, ZeP, ZeP, ZeP},
+  /* ZeP */     {Bot, Zer, ZeP, ZeP, ZeP, ZeP, ZeP},
+  /* Top */     {Bot, ZeP, ZeP, ZeP, ZeP, ZeP, ZeP},
+};
+
+constexpr TransferFunctions AndLookupTable = {
+  //             Bot  Neg  Zer  Pos  ZeN  ZeP  Top
+  /* Bot */     {Bot, Bot, Bot, Bot, Bot, Bot, Bot},
+  /* Neg */     {Bot, Neg, Zer, ZeP, ZeN, ZeP, Top},
+  /* Zer */     {Bot, Zer, Zer, Zer, Zer, Zer, Zer},
+  /* Pos */     {Bot, ZeP, Zer, ZeP, ZeP, ZeP, ZeP},
+  /* ZeN */     {Bot, ZeN, Zer, ZeP, ZeN, ZeP, Top},
+  /* ZeP */     {Bot, ZeP, Zer, ZeP, ZeP, ZeP, ZeP},
+  /* Top */     {Bot, Top, Zer, ZeP, Top, ZeP, Top},
+};
 
 void SignAnalysis::setToEntryState(SignLattice *lattice) {
   propagateIfChanged(lattice, lattice->join(SignState::top()));
@@ -55,12 +119,59 @@ SignAnalysis::visitOperation(Operation *op,
     return unknown();
   SignLattice *result = results[0];
 
-  // Rule 1: a constant is zero or nonzero according to what it says.
-  // This is the only rule that does not consult its operands, and without some
-  // rule of this kind the analysis would have no facts to propagate at all.
+  // Rule 1: zero, one, negative, or positive
   IntegerAttr value;
+  if (matchPattern(op, m_Constant(&value))) {
+    SignState state;
+    if (value.getValue().isZero()) {
+      state = Kind::Zero;
+    } else if (value.getValue().isStrictlyPositive()) {
+      state = Kind::Pos;
+    } else if (value.getValue().isNegative()) {
+      state = Kind::Neg;
+    }
 
-  // WIP
+    propagateIfChanged(result, result->join(state));
+    return success();
+  }
+
+  // Rule 2: binary operations look up their result in a transfer table.
+  // If the amount of operands is incorrect, trivially this is unknown.
+  if (operands.size() != 2) {
+    return unknown();
+  }
+
+  const TransferFunctions *table = nullptr;
+  if (isa<LLVM::AddOp>(op)) {
+    table = &AddLookupTable;
+  }
+  if (isa<LLVM::SubOp>(op)) {
+    table = &SubLookupTable;
+  }
+  if (isa<LLVM::MulOp>(op)) {
+    table = &MultLookupTable;
+  }
+  if (isa<LLVM::SDivOp>(op)) {
+    table = &DivLookupTable;
+  }
+  if (isa<LLVM::AndOp>(op)) {
+    table = &AndLookupTable;
+  }
+    
+  
+  if (auto compare = dyn_cast<LLVM::ICmpOp>(op)) {
+    if (compare.getPredicate() == LLVM::ICmpPredicate::sgt)
+    table = &GreaterThanLookupTable;
+    else if (compare.getPredicate() == LLVM::ICmpPredicate::eq)
+    table = &EqualLookupTable;
+  }
+  
+  SignState lhs = operands[0]->getValue();
+  SignState rhs = operands[1]->getValue();
+  if (table != nullptr) {
+    propagateIfChanged(result, result->join(evaluate(*table, lhs, rhs)));
+    return success();
+  }
 
   return unknown();
 }

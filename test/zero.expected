@@ -8,7 +8,7 @@
 
 # --- rule 1: constants ----------------------------------------------------
 llvm.mlir.constant(0 : i32) : i32 // %0 is zero
-llvm.mlir.constant(1 : i32) : i32 // %1 is nonzero
+llvm.mlir.constant(1 : i32) : i32 // %1 is pos
 
 # --- rule 2: `and` with a zero operand, and facts chaining through it ------
 llvm.and %0, %arg0 : i32 // %2 is zero
@@ -18,10 +18,11 @@ llvm.and %2, %arg0 : i32 // %4 is zero
 # --- the solver joining facts at a block argument -------------------------
 // argument: %2 is zero
 
-# --- soundness: these must stay unknown -----------------------------------
-# %5 = 1 & 1, since 1 & 2 is 0; %6 and %7 have no rule; %8 uses an argument.
-# If adding a rule for `or` or `add`, the matching line here must come out.
-!%5 is
+# --- soundness: sign facts that are sound but imprecise ------------------
+# %5 = 1 & 1 can't be `pos`, since 1 & 2 is 0; it is only known non-negative.
+llvm.and %1, %1 : i32 // %5 is zero pos
+llvm.add %0, %0 : i32 // %7 is zero
+llvm.and %arg0, %1 : i32 // %8 is zero pos
+
+# --- must stay unknown: `or` has no rule ----------------------------------
 !%6 is
-!%7 is
-!%8 is
