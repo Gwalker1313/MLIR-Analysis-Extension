@@ -27,6 +27,6 @@ public:
   void setToEntryState(SignLattice *lattice) override;
 };
 
-} // namespace zero
+} // namespace sign
 
 #endif

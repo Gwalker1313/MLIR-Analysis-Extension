@@ -65,4 +65,4 @@ SignAnalysis::visitOperation(Operation *op,
   return unknown();
 }
 
-} // namespace zero
+} // namespace sign
