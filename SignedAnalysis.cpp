@@ -12,14 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SignedAnalysis.h"
+#include "SignAnalysis.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Matchers.h"
 
 using namespace mlir;
 
-namespace signed {
+namespace sign {
 
 using TransferFunctions = Kind[KindCount][KindCount];
 
@@ -34,14 +34,14 @@ constexpr Kind Top = Kind::Top;
 
 
 
-void SignedAnalysis::setToEntryState(SignedLattice *lattice) {
-  propagateIfChanged(lattice, lattice->join(SignedState::top()));
+void SignAnalysis::setToEntryState(SignLattice *lattice) {
+  propagateIfChanged(lattice, lattice->join(SignState::top()));
 }
 
 LogicalResult
-SignedAnalysis::visitOperation(Operation *op,
-                             ArrayRef<const SignedLattice *> operands,
-                             ArrayRef<SignedLattice *> results) {
+SignAnalysis::visitOperation(Operation *op,
+                             ArrayRef<const SignLattice *> operands,
+                             ArrayRef<SignLattice *> results) {
   // Raising a result to top says "this operation could produce anything",
   // which is always a sound answer and is what every unhandled case does.
   auto unknown = [&] {
@@ -53,7 +53,7 @@ SignedAnalysis::visitOperation(Operation *op,
   // floats, and vectors all land in `unknown`.
   if (op->getNumResults() != 1 || !op->getResult(0).getType().isIntOrIndex())
     return unknown();
-  SignedLattice *result = results[0];
+  SignLattice *result = results[0];
 
   // Rule 1: a constant is zero or nonzero according to what it says.
   // This is the only rule that does not consult its operands, and without some

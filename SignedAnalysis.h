@@ -1,17 +1,17 @@
-//===- SignedAnalysis.h - Sparse forward analysis over SignedState ------------===//
+//===- SignAnalysis.h - Sparse forward analysis over SignState ------------===//
 
-#ifndef SIGNED_ANALYSIS_H
-#define SIGNED_ANALYSIS_H
+#ifndef SIGN_ANALYSIS_H
+#define SIGN_ANALYSIS_H
 
-#include "SignedDomain.h"
+#include "SignDomain.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 
-namespace signed {
+namespace sign {
 
-using SignedLattice = mlir::dataflow::Lattice<SignedState>;
+using SignLattice = mlir::dataflow::Lattice<SignState>;
 
-class SignedAnalysis
-    : public mlir::dataflow::SparseForwardDataFlowAnalysis<SignedLattice> {
+class SignAnalysis
+    : public mlir::dataflow::SparseForwardDataFlowAnalysis<SignLattice> {
 public:
   using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
@@ -19,12 +19,12 @@ public:
   /// its results.  Must be monotone in the operand states.
   mlir::LogicalResult
   visitOperation(mlir::Operation *op,
-                 llvm::ArrayRef<const SignedLattice *> operands,
-                 llvm::ArrayRef<SignedLattice *> results) override;
+                 llvm::ArrayRef<const SignLattice *> operands,
+                 llvm::ArrayRef<SignLattice *> results) override;
 
   /// The state of anything entering the analysis from outside: function
   /// arguments, and results the transfer function declines to reason about.
-  void setToEntryState(SignedLattice *lattice) override;
+  void setToEntryState(SignLattice *lattice) override;
 };
 
 } // namespace zero
