@@ -21,6 +21,19 @@ using namespace mlir;
 
 namespace signed {
 
+using TransferFunctions = Kind[KindCount][KindCount];
+
+constexpr Kind Bot = Kind::Bottom;
+constexpr Kind Neg = Kind::Neg;
+constexpr Kind Zer = Kind::Zero;
+constexpr Kind Pos = Kind::Pos;
+constexpr Kind ZeN = Kind::ZeroNeg;
+constexpr Kind ZeP = Kind::ZeroPos;
+constexpr Kind Top = Kind::Top;
+
+
+
+
 void SignedAnalysis::setToEntryState(SignedLattice *lattice) {
   propagateIfChanged(lattice, lattice->join(SignedState::top()));
 }

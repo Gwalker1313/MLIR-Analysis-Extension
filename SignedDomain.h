@@ -97,7 +97,7 @@ struct SignedState {
       /* Zer */     {Zer, ZeN, Zer, ZeP, ZeN, ZeP, Top},
       /* Pos */     {Pos, Top, ZeP, Pos, Top, ZeP, Top},
       /* ZeN */     {ZeN, ZeN, ZeN, Top, ZeN, Top, Top},
-      /* ZeP */     {ZeP, Top, Zep, Zep, Top, Zep, Top},
+      /* ZeP */     {ZeP, Top, ZeP, ZeP, Top, ZeP, Top},
       /* Top */     {Top, Top, Top, Top, Top, Top, Top},
     };
 
