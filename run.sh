@@ -3,7 +3,7 @@
 #
 #   ./run.sh input.mlir
 #
-# The plugin is ZeroAnalysis.dylib on macOS and ZeroAnalysis.so on Linux and
+# The plugin is SignedAnalysis.dylib on macOS and SignedAnalysis.so on Linux and
 # WSL2, so probe for it rather than hard-coding a suffix.  Set PLUGIN or
 # BUILD_DIR to override.
 set -eu
@@ -11,8 +11,7 @@ set -eu
 BUILD_DIR="${BUILD_DIR:-build}"
 
 if [ -z "${PLUGIN:-}" ]; then
-  for candidate in "$BUILD_DIR"/ZeroAnalysis.so "$BUILD_DIR"/ZeroAnalysis.dylib; do
-    if [ -f "$candidate" ]; then
+  for candidate in "$BUILD_DIR"/SignedAnalysis.so "$BUILD_DIR"/SignedAnalysis.dylib; do    if [ -f "$candidate" ]; then
       PLUGIN="$candidate"
       break
     fi
