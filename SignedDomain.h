@@ -27,8 +27,7 @@ namespace signed {
 
 enum class Kind { Bottom, Neg, Zero, Pos, ZeroNeg, ZeroPos, Top };
 
-
-inline const char *name(Kind kind) {
+inline const char* name(Kind kind) {
   switch (kind) {
     case Kind::Bottom:
     return "bottom";
@@ -46,6 +45,26 @@ inline const char *name(Kind kind) {
     return "top";
   }
   return "top";
+}
+
+inline const unsigned index(Kind kind) {
+  switch (kind) {
+    case Kind::Bottom:
+    return 0;
+    case Kind::Neg:
+    return 1;
+    case Kind::Zero:
+    return 2;
+    case Kind::Pos:
+    return 3;
+    case Kind::ZeroNeg:
+    return 4;
+    case Kind::ZeroPos:
+    return 5;
+    case Kind::Top:
+    return 6;
+  }
+  return 6;
 }
 
 inline constexpr unsigned KindCount = 7;
@@ -80,7 +99,9 @@ struct SignedState {
       /* ZeN */     {ZeN, ZeN, ZeN, Top, ZeN, Top, Top},
       /* ZeP */     {ZeP, Top, Zep, Zep, Top, Zep, Top},
       /* Top */     {Top, Top, Top, Top, Top, Top, Top},
-    }
+    };
+
+    return JoinLookupTable[index(lhs.kind)][index(rhs.kind)];
   }
 
   bool operator==(const SignedState &other) const { return kind == other.kind; }
