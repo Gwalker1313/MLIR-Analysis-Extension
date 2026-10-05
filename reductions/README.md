@@ -19,7 +19,6 @@ dataflow chains:
 Each part (testing, reducing, regenerating) can be run from the repository
 root with the following, after building the plugin:
 
-(If on macOS with Homebrew, export PATH="$(brew --prefix llvm)/bin:$PATH")
 
 ```sh
 # If on macOS, then first run the following with Homebrew:
