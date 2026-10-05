@@ -1,10 +1,9 @@
 #!/bin/bash
 # Interestingness test for llvm-reduce: exit 0 = interesting, non-zero = not.
-# Property: the sign analysis proves a mul/sdiv/sub/add result is exactly zero.
-# (Constants and `and` are excluded so the fact must come from propagation.)
+# Property: zero is produced by an operation touching an UNKNOWN argument,
+# then propagates through at least two non-constant operations.
 
 PASS="zero-analysis"
-PATTERN='llvm\.(mul|sdiv|sub|add) .*// %[0-9]+ is zero$'
 
 IN="$1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -24,4 +23,9 @@ mlir-opt --load-pass-plugin="$PLUGIN" \
          --pass-pipeline="builtin.module($PASS)" \
          "$TMP/in.mlir" -o /dev/null 2> "$TMP/out.txt" >/dev/null || exit 1
 
-grep -Eq "$PATTERN" "$TMP/out.txt"
+OUT="$TMP/out.txt"
+
+# Zero must be produced by an op that touches an unknown argument...
+grep -Eq 'llvm\.(and|mul|sdiv) .*%arg[0-9]+.*// %[0-9]+ is zero$' "$OUT" || exit 1
+# ...and must show up on at least two non-constant operations in total.
+[ "$(grep -Ec 'llvm\.(and|mul|sdiv|sub|add) .*// %[0-9]+ is zero$' "$OUT")" -ge 2 ]

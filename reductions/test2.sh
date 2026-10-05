@@ -1,9 +1,9 @@
 #!/bin/bash
 # Interestingness test for llvm-reduce: exit 0 = interesting, non-zero = not.
-# Property: the sign analysis proves some `and` result is zero-or-positive.
+# Property: an `and` with an UNKNOWN function argument as an operand is proven
+# zero or positive (the constant mask clears the sign bit).
 
 PASS="zero-analysis"
-PATTERN='llvm\.and .*// %[0-9]+ is zero or positive$'
 
 IN="$1"
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -23,4 +23,4 @@ mlir-opt --load-pass-plugin="$PLUGIN" \
          --pass-pipeline="builtin.module($PASS)" \
          "$TMP/in.mlir" -o /dev/null 2> "$TMP/out.txt" >/dev/null || exit 1
 
-grep -Eq "$PATTERN" "$TMP/out.txt"
+grep -Eq 'llvm\.and .*%arg[0-9]+.*// %[0-9]+ is zero or positive$' "$TMP/out.txt"
