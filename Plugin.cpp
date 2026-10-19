@@ -31,6 +31,13 @@ struct SignAnalysisPass
     : PassWrapper<SignAnalysisPass, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SignAnalysisPass)
 
+  SignAnalysisPass() = default;
+  SignAnalysisPass(const SignAnalysisPass &other) : PassWrapper(other) {}
+
+  Option<bool> instrument{*this, "instrument",
+      llvm::cl::desc("Insert runtime checks for inferred integer signs"),
+      llvm::cl::init(false)};
+
   StringRef getArgument() const final { return "zero-analysis"; }
 
   StringRef getDescription() const final {
