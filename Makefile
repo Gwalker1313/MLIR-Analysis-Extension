@@ -64,38 +64,53 @@ $(REDUCE_TARGETS): reduce%: build  ## reduce1 / reduce2 / reduce3: run one reduc
 
 reduce-all: $(REDUCE_TARGETS)  ## Regenerate all three reducedN.mlir files
 
-# ---- Dynamic soundness checking (soundness/) --------------------------------
-# Pipeline: C -> LLVM IR -> MLIR -> instrumented MLIR -> LLVM IR -> executable.
-# -fwrapv makes signed overflow defined, so a failed check means the analysis
-# is unsound rather than the program having undefined behavior.
-soundness-build: build  ## Instrument soundness/prog.c and compile it
-	clang -O1 -g -fwrapv -S -emit-llvm -o soundness/prog.ll soundness/prog.c
-	mlir-translate --import-llvm soundness/prog.ll -o soundness/prog.mlir
+# ---- Dynamic soundness checking ---------------------------------------------
+# Source files live in soundness/; everything generated goes in soundness/out/.
+SDIR := soundness
+OUT  := $(SDIR)/out
+
+$(OUT):
+	mkdir -p $@
+
+$(OUT)/prog.ll: $(SDIR)/prog.c | $(OUT)
+	clang -O1 -g -fwrapv -S -emit-llvm -o $@ $<
+
+$(OUT)/prog.mlir: $(OUT)/prog.ll
+	mlir-translate --import-llvm $< -o $@
+
+# `build` is order-only: make ensures the plugin exists without treating it as
+# a reason to redo this step every time.
+$(OUT)/prog.inst.mlir: $(OUT)/prog.mlir | build
 	mlir-opt --load-pass-plugin=$(PLUGIN) \
 	  --pass-pipeline='$(INSTRUMENT_PIPELINE)' \
-	  soundness/prog.mlir -o soundness/prog.inst.mlir 2> soundness/annotated.txt
-	mlir-translate --mlir-to-llvmir soundness/prog.inst.mlir -o soundness/prog.inst.ll
-	clang -Wno-override-module soundness/prog.inst.ll -o soundness/prog
+	  $< -o $@ 2> $(OUT)/annotated.txt
 
-soundness: soundness-build  ## Run the instrumented program with ARGS (default 1)
-	@./soundness/prog $(ARGS); echo "exit: $$?"
+$(OUT)/prog.inst.ll: $(OUT)/prog.inst.mlir
+	mlir-translate --mlir-to-llvmir $< -o $@
 
-soundness-sweep: soundness-build  ## Run it on edge values (EDGE_VALUES)
+$(OUT)/prog: $(OUT)/prog.inst.ll
+	clang -Wno-override-module $< -o $@
+
+soundness-build: $(OUT)/prog  ## Instrument soundness/prog.c and compile it
+
+soundness: $(OUT)/prog  ## Run the instrumented program with ARGS (default 1)
+	@./$(OUT)/prog $(ARGS); echo "exit: $$?"
+
+soundness-sweep: $(OUT)/prog  ## Run it on edge values (EDGE_VALUES)
 	@for x in $(EDGE_VALUES); do \
-	  ./soundness/prog $$x > /dev/null 2>&1; echo "x=$$x exit=$$?"; \
+	  ./$(OUT)/prog $$x > /dev/null 2>&1; echo "x=$$x exit=$$?"; \
 	done
 
-reduce-soundness: soundness-build  ## Reduce prog.ll to a minimal failing case
-	chmod +x soundness/reduce.sh
-	llvm-reduce --test=$(CURDIR)/soundness/reduce.sh \
-	  -o soundness/reduced.ll soundness/prog.ll
-	mlir-translate --import-llvm soundness/reduced.ll -o soundness/reduced.mlir
+# Reduced results are deliverables, so they live outside $(OUT).
+reduce-soundness: $(OUT)/prog.ll | build  ## Reduce to a minimal failing case
+	chmod +x $(SDIR)/reduce.sh
+	llvm-reduce --test=$(CURDIR)/$(SDIR)/reduce.sh \
+	  -o $(SDIR)/reduced.ll $(OUT)/prog.ll
+	mlir-translate --import-llvm $(SDIR)/reduced.ll -o $(SDIR)/reduced.mlir
 
-# ---- Cleanup -----------------------------------------------------------------
-clean:  ## Remove generated soundness files and compiled objects, keep CMake config
-	rm -f soundness/prog soundness/*.ll soundness/*.inst.mlir soundness/prog.mlir \
-	      soundness/annotated.txt
-	-cmake --build $(BUILD) --target clean
+# ---- Cleanup ----------------------------------------------------------------
+clean:  ## Remove generated intermediates (keeps sources, reduced results, and the plugin)
+	rm -rf $(OUT)
 
-distclean: clean  ## Also delete the build directory
+distclean: clean  ## Also delete the build directory (the plugin)
 	rm -rf $(BUILD)

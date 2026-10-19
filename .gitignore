@@ -46,6 +46,7 @@
 build/
 Build/
 build-*/
+soundness/out/
 
 # CMake generated files
 CMakeFiles/

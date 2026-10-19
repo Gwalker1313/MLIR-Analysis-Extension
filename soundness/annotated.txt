@@ -1,0 +1,5 @@
+Failed to load passes from '../build/SignedAnalysis.dylib'. Request ignored.
+<unknown>:0: error: MLIR Textual PassPipeline Parser:1:1: error: 'zero-analysis' does not refer to a registered pass or pass pipeline
+zero-analysis{instrument=true}
+^
+
