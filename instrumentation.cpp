@@ -10,6 +10,62 @@
 
 namespace sign {
 
+    // Output to stderr before trap so that original output is not lost
+    // in a stdio buffer.
+    void printFailure(mlir::OpBuilder& builder, mlir::Value value, llvm::StringRef description) {
+        auto location = value.getLoc();
+        auto module = value.getParentBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+        auto pointer = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+        auto functionType = mlir::LLVM::LLVMFunctionType::get(builder.getI32Type(), {builder.getI32Type(), pointer}, true);
+        auto printer = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("dprintf");
+        if (!printer) {
+            mlir::OpBuilder::InsertionGuard guard(builder);
+            builder.setInsertionPointToStart(module.getBody());
+            printer = mlir::LLVM::LLVMFuncOp::create(builder, location, "dprintf", functionType);
+        }
+
+        // Escape SSA '%' characters for printf.
+        std::string format;
+        for (char character : description) {
+            format += character;
+            if (character == '%')
+                format += '%';
+        }
+
+        llvm::SmallVector<mlir::Value> actual;
+        unsigned width = llvm::cast<mlir::IntegerType>(value.getType()).getWidth();
+        if (width <= 64) {
+            format += "  actual: %lld\n";
+            actual.push_back(width == 64 ? value : mlir::LLVM::SExtOp::create(builder, location, builder.getI64Type(), value).getResult());
+        } 
+        else {
+            // Preserve wider integers as hexadecimal.
+            format += "  actual: 0x";
+            for (unsigned chunk = (width - 1) / 64 + 1; chunk > 0; --chunk) {
+                unsigned shift = (chunk - 1) * 64;
+                mlir::Value bits = value;
+                if (shift) {
+                    auto amount = mlir::LLVM::ConstantOp::create(builder, location, value.getType(), builder.getIntegerAttr(value.getType(), shift));
+                    bits = mlir::LLVM::LShrOp::create(builder, location, value, amount.getResult()).getResult();
+                }
+                actual.push_back(mlir::LLVM::TruncOp::create(builder, location, builder.getI64Type(), bits).getResult());
+                format += chunk == (width - 1) / 64 + 1 ? "%llx" : "%016llx";
+            }
+            format += "\n";
+        }
+        format += '\0';
+        unsigned index = 0;
+        std::string symbol;
+        do {
+            symbol = "__sign_failure_message_" + std::to_string(index++);
+        } while (module.lookupSymbol(symbol));
+        auto message = mlir::LLVM::createGlobalString(location, builder, symbol, format, mlir::LLVM::Linkage::Private);
+        auto stderrFd = mlir::LLVM::ConstantOp::create(builder, location, builder.getI32Type(), builder.getI32IntegerAttr(2));
+        llvm::SmallVector<mlir::Value> arguments{stderrFd.getResult(), message};
+        arguments.append(actual);
+        mlir::LLVM::CallOp::create(builder, location, printer, arguments);
+    }
+
     void assertion(Kind kind, mlir::Value value) {
         auto type = llvm::dyn_cast<mlir::IntegerType>(value.getType());
         mlir::Block *block = value.getParentBlock();
