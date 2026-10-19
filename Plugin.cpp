@@ -61,6 +61,36 @@ struct SignAnalysisPass
       return signalPassFailure();
     }
 
+    llvm::SmallVector<std::pair<Value, sign::Kind>> checks;
+    if (instrument) {
+      auto collect = [&](Value value) {
+        auto type = llvm::dyn_cast<IntegerType>(value.getType());
+        if (!type || type.getWidth() == 1)  {
+          return;
+        }
+        const auto *lattice = solver.lookupState<sign::SignLattice>(value);
+        if (!lattice) {
+          return;
+        }
+        sign::Kind kind = lattice->getValue().kind;
+        if (kind != sign::Kind::Top && kind != sign::Kind::Bottom) {
+          checks.emplace_back(value, kind);
+        }
+      };
+      getOperation().walk([&](LLVM::LLVMFuncOp function) {
+        for (Block &block : function.getBody()) {
+          for (BlockArgument argument : block.getArguments()) {
+            collect(argument);
+          }
+          for (Operation &op : block) {
+            for (Value result : op.getResults()) {
+              collect(result);
+            }
+          }
+        }
+      });
+    }
+
     // Query states only now that the solver has converged.
     auto describe = [&](Value value, AsmState &asmState) -> std::string {
       const auto *lattice = solver.lookupState<sign::SignLattice>(value);
