@@ -6,7 +6,9 @@
 
 #include "Annotate.h"
 #include "SignedAnalysis.h"
+#include "Instrumentation.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/IR/AsmState.h"
@@ -17,6 +19,8 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include <utility>
 
 using namespace mlir;
 
