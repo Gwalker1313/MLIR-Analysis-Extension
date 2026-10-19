@@ -112,7 +112,14 @@ struct SignAnalysisPass
     zero::printAnnotated(getOperation(), describe, llvm::errs());
 
     // This pass only reads.
-    markAllAnalysesPreserved();
+    // markAllAnalysesPreserved();
+    for (const auto &[value, kind] : checks) {
+      sign::assertion(kind, value);
+    }
+
+    if (!instrument) {
+      markAllAnalysesPreserved();
+    }
   }
 };
 
